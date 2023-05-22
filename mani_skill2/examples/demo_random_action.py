@@ -9,11 +9,11 @@ from mani_skill2.utils.wrappers import RecordEpisode
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--env-id", type=str, default="PickCube-v0")
-    parser.add_argument("-o", "--obs-mode", type=str, default="none")
+    parser.add_argument("-e", "--env-id", type=str, default="DexTurnFaucet-v0")
+    parser.add_argument("-o", "--obs-mode", type=str, default="rgbd")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
-    parser.add_argument("--render-mode", type=str)
+    parser.add_argument("--render-mode", type=str, default='human')
     parser.add_argument("--record-dir", type=str)
     args, opts = parser.parse_known_args()
 
@@ -64,7 +64,7 @@ def main():
             env.render(args.render_mode)
 
         if done:
-            break
+            env.reset()
 
 
 if __name__ == "__main__":
