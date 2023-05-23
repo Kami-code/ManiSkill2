@@ -5,12 +5,14 @@ import numpy as np
 
 from mani_skill2.envs.sapien_env import BaseEnv
 from mani_skill2.utils.wrappers import RecordEpisode
-
+from icecream import ic
+import icecream
+icecream.install()
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--env-id", type=str, default="DexTurnFaucet-v0")
-    parser.add_argument("-o", "--obs-mode", type=str, default="rgbd")
+    parser.add_argument("-o", "--obs-mode", type=str, default="pointcloud")
     parser.add_argument("--reward-mode", type=str)
     parser.add_argument("-c", "--control-mode", type=str)
     parser.add_argument("--render-mode", type=str, default='human')
@@ -30,7 +32,7 @@ def parse_args():
 def main():
     np.set_printoptions(suppress=True, precision=3)
     args = parse_args()
-
+    ic(args.obs_mode)
     env: BaseEnv = gym.make(
         args.env_id,
         obs_mode=args.obs_mode,
