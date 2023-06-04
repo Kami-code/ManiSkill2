@@ -202,7 +202,7 @@ class AvoidObstaclesBaseEnv(BaseEnv):
 
         contacts = self._scene.get_contacts()
         max_impulse_norm = get_articulation_max_impulse_norm(contacts, self.agent.robot)
-        reward = close_to_goal_reward + angular_reward - 50.0 * max(1, max_impulse_norm)
+        reward = close_to_goal_reward + angular_reward - 0.5 * max(1, max_impulse_norm)
         return reward
 
     def _register_cameras(self):
