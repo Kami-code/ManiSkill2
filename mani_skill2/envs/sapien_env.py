@@ -89,8 +89,8 @@ class BaseEnv(gym.Env):
         render_camera_cfgs: dict = None,
         bg_name: str = None,
     ):
-        from icecream import ic
-        ic(obs_mode)
+        # from icecream import ic
+        # ic(obs_mode)
         # Create SAPIEN engine
         self._engine = sapien.Engine()
         # TODO(jigu): Change to `warning` after lighting in VecEnv is fixed.
