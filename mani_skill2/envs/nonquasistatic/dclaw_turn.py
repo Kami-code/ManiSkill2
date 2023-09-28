@@ -62,23 +62,21 @@ class DClawTurnEnv(NonQuasiStaticEnv):
     def _initialize_task(self):
         self.valve.set_qpos([0])
         self._target_object_qpos = np.pi
-        # self.goal_pos = self.box_hole_pose.p  # goal of peg head inside the hole
-        # # NOTE(jigu): The goal pose is computed based on specific geometries used in this task.
-        # # Only consider one side
-        # self.goal_pose = (
-        #     self.box.pose * self.box_hole_offset * self.peg_head_offset.inv()
-        # )
-        # self.peg.set_pose(self.goal_pose)
 
     def _get_obs_extra(self) -> OrderedDict:
-        obs = OrderedDict(tcp_pose=vectorize_pose(self.tcp.pose))
-        # if self._obs_mode in ["state", "state_dict"]:
-        #     obs.update(
-        #         peg_pose=vectorize_pose(self.peg.pose),
-        #         peg_half_size=self.peg_half_size,
-        #         box_hole_pose=vectorize_pose(self.box_hole_pose),
-        #         box_hole_radius=self.box_hole_radius,
-        #     )
+        obs = OrderedDict()
+        if self._obs_mode in ["state", "state_dict"]:
+            target_error = self._target_object_qpos - self.valve.get_qpos()[0]
+            target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
+            target_dist = np.abs(target_error)
+            obs.update(
+                claw_qpos=self.agent.robot.get_qpos(),
+                claw_qvel=self.agent.robot.get_qvel(),
+                object_x=np.cos(self.valve.get_qpos()[0]),
+                object_y=np.sin(self.valve.get_qpos()[0]),
+                object_qvel=self.valve.get_qvel()[0],
+                target_error=target_dist
+            )
         return obs
 
     def evaluate(self, **kwargs) -> dict:
