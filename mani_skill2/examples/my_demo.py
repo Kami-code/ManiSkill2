@@ -12,7 +12,7 @@ if __name__ == "__main__":
     terminated, truncated = False, False
     while True:
         action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(action)
+        # obs, reward, terminated, truncated, info = env.step(action)
         # print(reward)
         env.render()  # a display is required to render
     env.close()

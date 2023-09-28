@@ -1,21 +1,18 @@
 import os.path
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import sapien.core as sapien
-import transforms3d
 from sapien.core import Pose
 
 from mani_skill2 import format_path
-from mani_skill2.utils.common import random_choice
-from mani_skill2.utils.io_utils import load_json
 from mani_skill2.utils.registration import register_env
 
 from mani_skill2.utils.sapien_utils import hex2rgba, look_at, vectorize_pose
 from transforms3d.euler import euler2quat
 from .base_env import NonQuasiStaticEnv
+
 
 @register_env("DClawTurn-v0", max_episode_steps=200)
 class DClawTurnEnv(NonQuasiStaticEnv):
@@ -42,7 +39,7 @@ class DClawTurnEnv(NonQuasiStaticEnv):
             joint.set_friction(0.02)
 
         valve.set_qpos([0])
-        valve.set_pose(Pose(p=[0, 0, 0.33]))
+        valve.set_pose(Pose(p=[0, 0, 0.0], q=euler2quat(0, 0, np.pi)))
         return valve
 
     def _load_actors(self):
@@ -54,9 +51,10 @@ class DClawTurnEnv(NonQuasiStaticEnv):
 
     def _initialize_agent(self):
         if self.robot_uid == "dclaw":
-            RESET_POSE = [0, -1.57, -1.57, 0, 1.57, 1.57, 0, -1.57, 1.57]
-            self.agent.reset(RESET_POSE)
-            pose = Pose(p=np.array([0.1, 0.09, 0.6]), q=transforms3d.euler.euler2quat(np.pi / 2, np.pi / 2, 0))
+            # self.RESET_POSE = np.array([0, -1.57, -1.57, 0, 1.57, 1.57, 0, -1.57, 1.57])
+            self.RESET_POSE = np.zeros((9))
+            self.agent.reset(self.RESET_POSE)
+            pose = Pose(p=np.array([0.135, 0.09, 0.3]), q=euler2quat(np.pi / 2, np.pi / 2, 0))
             self.agent.robot.set_pose(pose=pose)
         else:
             raise NotImplementedError(self.robot_uid)
@@ -88,36 +86,17 @@ class DClawTurnEnv(NonQuasiStaticEnv):
 
     def compute_dense_reward(self, info, **kwargs):
         reward = 0.0
+
+        claw_qpos = self.agent.robot.get_qpos()
+        claw_qvel = self.agent.robot.get_qvel()
         target_error = self._target_object_qpos - self.valve.get_qpos()[0]
         target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
-
-        #
-        # obs_dict = collections.OrderedDict((
-        #     ('claw_qpos', claw_state.qpos),
-        #     ('claw_qvel', claw_state.qvel),
-        #     ('object_x', np.cos(object_state.qpos)),
-        #     ('object_y', np.sin(object_state.qpos)),
-        #     ('object_qvel', object_state.qvel),
-        #     ('last_action', self._get_last_action()),
-        #     ('target_error', target_error),
-        # ))
-        # # Add hardware-specific state if present.
-        # if isinstance(claw_state, DynamixelRobotState):
-        #     obs_dict['claw_current'] = claw_state.current
         target_dist = np.abs(target_error)
 
-        reward -= 5 * target_dist   # Penalty for distance away from goal.
-
-
-        gripper_pos = self.tcp.get_pose().p
-        obj_pos = self.valve.get_pose().p
-        dist = np.linalg.norm(gripper_pos - obj_pos)
-        reward -= dist
-        # reaching_reward = 1 - np.tanh(5 * dist)
-        # reward += reaching_reward
-        # reward -= np.linalg.norm(claw_vel[np.abs(claw_vel) >= 0.5])     # Penality for high velocities.
-
-        reward += 10 * (target_dist < 0.25)     # Reward for close proximity with goal.
+        reward -= 5 * target_dist  # Penalty for distance away from goal.
+        reward -= np.linalg.norm(claw_qpos - self.RESET_POSE)  # Penalty for difference with nomimal pose.
+        reward -= np.linalg.norm(claw_qvel[np.abs(claw_qvel) > 0.5])
+        reward += 10 * (target_dist < 0.25)  # Reward for close proximity with goal.
         reward += 50 * (target_dist < 0.10)
         return reward
 
@@ -139,4 +118,3 @@ class DClawTurnEnv(NonQuasiStaticEnv):
         # NOTE(xuanlin): This way is specific to how we compute goals.
         # The general way is to handle variables explicitly
         self._initialize_task()
-
