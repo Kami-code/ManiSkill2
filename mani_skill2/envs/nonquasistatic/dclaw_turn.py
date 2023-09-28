@@ -51,7 +51,6 @@ class DClawTurnEnv(NonQuasiStaticEnv):
 
     def _initialize_agent(self):
         if self.robot_uid == "dclaw":
-            # self.RESET_POSE = np.array([0, -1.57, -1.57, 0, 1.57, 1.57, 0, -1.57, 1.57])
             self.RESET_POSE = np.zeros((9))
             self.agent.reset(self.RESET_POSE)
             pose = Pose(p=np.array([0.135, 0.09, 0.3]), q=euler2quat(np.pi / 2, np.pi / 2, 0))
@@ -70,8 +69,8 @@ class DClawTurnEnv(NonQuasiStaticEnv):
             target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
             target_dist = np.abs(target_error)
             obs.update(
-                claw_qpos=self.agent.robot.get_qpos(),
-                claw_qvel=self.agent.robot.get_qvel(),
+                claw_qpos=self.agent.robot.get_qpos()[0],
+                claw_qvel=self.agent.robot.get_qvel()[0],
                 object_x=np.cos(self.valve.get_qpos()[0]),
                 object_y=np.sin(self.valve.get_qpos()[0]),
                 object_qvel=self.valve.get_qvel()[0],
@@ -80,7 +79,10 @@ class DClawTurnEnv(NonQuasiStaticEnv):
         return obs
 
     def evaluate(self, **kwargs) -> dict:
-        return dict(success=False)
+        target_error = self._target_object_qpos - self.valve.get_qpos()[0]
+        target_error = np.mod(target_error + np.pi, 2 * np.pi) - np.pi
+        target_dist = np.abs(target_error)
+        return dict(success=(target_dist < 0.01))
 
     def compute_dense_reward(self, info, **kwargs):
         reward = 0.0

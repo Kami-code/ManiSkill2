@@ -69,36 +69,6 @@ class DClawDefaultConfig:
         arm_pd_joint_target_delta_pos = deepcopy(arm_pd_joint_delta_pos)
         arm_pd_joint_target_delta_pos.use_target = True
 
-        # PD ee position
-        arm_pd_ee_delta_pos = PDEEPosControllerConfig(
-            self.arm_joint_names,
-            -0.1,
-            0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
-            ee_link=self.ee_link_name,
-        )
-        arm_pd_ee_delta_pose = PDEEPoseControllerConfig(
-            self.arm_joint_names,
-            -0.1,
-            0.1,
-            0.1,
-            self.arm_stiffness,
-            self.arm_damping,
-            self.arm_force_limit,
-            ee_link=self.ee_link_name,
-        )
-
-        arm_pd_ee_target_delta_pos = deepcopy(arm_pd_ee_delta_pos)
-        arm_pd_ee_target_delta_pos.use_target = True
-        arm_pd_ee_target_delta_pose = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_target_delta_pose.use_target = True
-
-        # PD ee position (for human-interaction/teleoperation)
-        arm_pd_ee_delta_pose_align = deepcopy(arm_pd_ee_delta_pose)
-        arm_pd_ee_delta_pose_align.frame = "ee_align"
-
         # PD joint velocity
         arm_pd_joint_vel = PDJointVelControllerConfig(
             self.arm_joint_names,
@@ -145,13 +115,8 @@ class DClawDefaultConfig:
         controller_configs = dict(
             pd_joint_delta_pos=dict(arm=arm_pd_joint_delta_pos),
             pd_joint_pos=dict(arm=arm_pd_joint_pos),
-            pd_ee_delta_pos=dict(arm=arm_pd_ee_delta_pos),
-            pd_ee_delta_pose=dict(arm=arm_pd_ee_delta_pose),
-            pd_ee_delta_pose_align=dict(arm=arm_pd_ee_delta_pose_align),
             # TODO(jigu): how to add boundaries for the following controllers
             pd_joint_target_delta_pos=dict(arm=arm_pd_joint_target_delta_pos),
-            pd_ee_target_delta_pos=dict(arm=arm_pd_ee_target_delta_pos),
-            pd_ee_target_delta_pose=dict(arm=arm_pd_ee_target_delta_pose),
             # Caution to use the following controllers
             pd_joint_vel=dict(arm=arm_pd_joint_vel),
             pd_joint_pos_vel=dict(arm=arm_pd_joint_pos_vel),
