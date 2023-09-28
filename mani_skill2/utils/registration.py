@@ -129,7 +129,6 @@ def register_env(uid: str, max_episode_steps=None, override=False, **kwargs):
           `gym.make` wraps the env with `gym.wrappers.TimeLimit` to limit the maximum number of steps.
         - `gym.EnvSpec` uses kwargs instead of **kwargs!
     """
-
     def _register_env(cls):
         if uid in REGISTERED_ENVS:
             if override:
