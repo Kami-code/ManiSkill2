@@ -74,7 +74,7 @@ class Policy(nn.Module):
         self,
         obs_dims,
         act_dims,
-        hidden_units=[128, 128],
+        hidden_units=[224, 224],
         activation=nn.ReLU,
     ):
         super().__init__()

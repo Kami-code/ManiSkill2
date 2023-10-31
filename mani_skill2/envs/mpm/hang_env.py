@@ -174,7 +174,7 @@ class HangEnv(MPMBaseEnv):
 
     def _register_cameras(self):
         p, q = [0.45, -0.0, 0.5], euler2quat(0, np.pi / 5, np.pi)
-        return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
+        return CameraConfig("base_camera", p, q, 224, 224, np.pi / 2, 0.001, 10)
 
     def _register_render_cameras(self):
         p, q = [0.2, 1.0, 0.5], euler2quat(0, 0.2, 4.4)

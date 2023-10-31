@@ -7,7 +7,123 @@ from tqdm import tqdm
 
 from mani_skill2.utils.visualization.misc import observations_to_images, tile_images
 from mani_skill2.vector import VecEnv, make
+import torch.nn as nn
+import torch
+from icecream import ic
 
+class PointNet(nn.Module):  # actually pointnet
+    def __init__(self, point_channel=3, output_dim=256):
+        # NOTE: we require the output dim to be 256, in order to match the pretrained weights
+        super(PointNet, self).__init__()
+
+        print(f'PointNetSmall')
+
+        in_channel = point_channel
+        mlp_out_dim = 256
+        self.local_mlp = nn.Sequential(
+            nn.Linear(in_channel, 64),
+            nn.GELU(),
+            nn.Linear(64, mlp_out_dim),
+        )
+        self.reset_parameters_()
+
+    def reset_parameters_(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.trunc_normal_(m.weight, std=.02)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        '''
+        x: [B, N, 3]
+        '''
+        # pc = x[0].cpu().detach().numpy()
+        # Local
+        x = self.local_mlp(x)
+        # gloabal max pooling
+        x = torch.max(x, dim=1)[0]
+        return x
+
+class PointNetMedium(nn.Module):  # actually pointnet
+    def __init__(self, point_channel=3, output_dim=256):
+        # NOTE: we require the output dim to be 256, in order to match the pretrained weights
+        super(PointNetMedium, self).__init__()
+
+        print(f'PointNetMedium')
+
+        in_channel = point_channel
+        mlp_out_dim = 256
+        self.local_mlp = nn.Sequential(
+            nn.Linear(in_channel, 64),
+            nn.GELU(),
+            nn.Linear(64, 64),
+            nn.GELU(),
+            nn.Linear(64, 128),
+            nn.GELU(),
+            nn.Linear(128, mlp_out_dim),
+        )
+        self.reset_parameters_()
+
+    def reset_parameters_(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.trunc_normal_(m.weight, std=.02)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        '''
+        x: [B, N, 3]
+        '''
+        # Local
+        x = self.local_mlp(x)
+        # gloabal max pooling
+        x = torch.max(x, dim=1)[0]
+        return x
+
+
+class PointNetLarge(nn.Module):  # actually pointnet
+    def __init__(self, point_channel=3, output_dim=256):
+        # NOTE: we require the output dim to be 256, in order to match the pretrained weights
+        super(PointNetLarge, self).__init__()
+
+        print(f'PointNetLarge')
+
+        in_channel = point_channel
+        mlp_out_dim = 256
+        self.local_mlp = nn.Sequential(
+            nn.Linear(in_channel, 64),
+            nn.GELU(),
+            nn.Linear(64, 64),
+            nn.GELU(),
+            nn.Linear(64, 128),
+            nn.GELU(),
+            nn.Linear(128, 128),
+            nn.GELU(),
+            nn.Linear(128, 256),
+            nn.GELU(),
+            nn.Linear(256, mlp_out_dim),
+        )
+
+        self.reset_parameters_()
+
+    def reset_parameters_(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.trunc_normal_(m.weight, std=.02)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        '''
+        x: [B, N, 3]
+        '''
+        # Local
+        x = self.local_mlp(x)
+        # gloabal max pooling
+        x = torch.max(x, dim=1)[0]
+        return x
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
@@ -107,7 +223,7 @@ def main(args):
     samples_so_far = 0
     total_samples = n_ep * l_ep * args.n_envs
     tic = time.time()
-
+    pn = PointNetLarge().cuda()
     pbar = tqdm(range(n_ep))
     for i in pbar:
         # NOTE(jigu): reset is a costly operation
@@ -116,42 +232,9 @@ def main(args):
         for t in range(l_ep):
             action = env.action_space.sample()
             obs, reward, terminated, truncated, info = env.step(action)
+            pn.forward(obs['pointcloud']['xyzw'][:, :, :3])
             samples_so_far += args.n_envs
 
-            # Visualize
-            if args.vis and env.obs_mode in ["image", "rgbd", "rgbd_robot_seg"]:
-                import cv2
-
-                images = []
-                for i_env in range(args.n_envs):
-                    for cam_images in obs["image"].values():
-                        images_i = observations_to_images(
-                            {k: v[i_env].cpu().numpy() for k, v in cam_images.items()}
-                        )
-                        images.append(np.concatenate(images_i, axis=0))
-                cv2.imshow("vis", tile_images(images)[..., ::-1])
-                cv2.waitKey(0)
-
-            if args.vis and env.obs_mode in ["pointcloud", "pointcloud_robot_seg"]:
-                import trimesh
-
-                scene = trimesh.Scene()
-                for i_env in range(args.n_envs):
-                    pcd_obs = obs["pointcloud"]
-                    xyz = pcd_obs["xyzw"][i_env, ..., :3].cpu().numpy()
-                    w = pcd_obs["xyzw"][i_env, ..., 3].cpu().numpy()
-                    rgb = pcd_obs["rgb"][i_env].cpu().numpy()
-                    if "robot_seg" in pcd_obs:
-                        robot_seg = pcd_obs["robot_seg"][i_env].cpu().numpy()
-                        rgb = np.uint8(robot_seg * [11, 61, 127])
-                    # trimesh.PointCloud(xyz, rgb).show()
-                    # Distribute point clouds in z axis
-                    T = np.eye(4)
-                    T[2, 3] = i_env * 1.0
-                    scene.add_geometry(
-                        trimesh.PointCloud(xyz[w > 0], rgb[w > 0]), transform=T
-                    )
-                scene.show()
         fps = samples_so_far / (time.time() - tic)
         pbar.set_postfix(dict(FPS=f"{fps:0.2f}"))
     toc = time.time()

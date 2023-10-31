@@ -11,18 +11,19 @@ import torch.nn as nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback, EvalCallback
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 
 import mani_skill2.envs
+from examples.tutorials.rl.extractors.custor_extractor import CustomExtractor
 from mani_skill2.utils.common import flatten_dict_space_keys, flatten_state_dict
 from mani_skill2.utils.wrappers import RecordEpisode
 from mani_skill2.vector import VecEnv
 from mani_skill2.vector import make as make_vec_env
 from mani_skill2.vector.vec_env import VecEnvObservationWrapper
 from mani_skill2.vector.wrappers.sb3 import SB3VecEnvWrapper
-
+from icecream import ic
+# ic.install()
 
 # Defines a continuous, infinite horizon, task where terminated is always False
 # unless a timelimit is reached.
@@ -69,6 +70,8 @@ class ManiSkillRGBDWrapper(gym.ObservationWrapper):
             cam_space = obs_space["image"][cam_uid]
             image_shapes.append(cam_space["rgb"].shape)
             image_shapes.append(cam_space["depth"].shape)
+            ic(cam_space['depth'].shape)
+            ic(cam_space['rgb'].shape)
         image_shapes = np.array(image_shapes)
         assert np.all(image_shapes[0, :2] == image_shapes[:, :2]), image_shapes
         h, w = image_shapes[0, :2]
@@ -128,76 +131,7 @@ class ManiSkillRGBDVecEnvWrapper(VecEnvObservationWrapper):
         return ManiSkillRGBDWrapper.convert_observation(observation)
 
 
-class CustomExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Dict):
-        super().__init__(observation_space, features_dim=1)
 
-        extractors = {}
-
-        total_concat_size = 0
-        feature_size = 128
-
-        for key, subspace in observation_space.spaces.items():
-            # We go through all subspaces in the observation space.
-            # We know there will only be "rgbd" and "state", so we handle those below
-            if key == "rgbd":
-                # here we use a NatureCNN architecture to process images, but any architecture is permissble here
-                in_channels = subspace.shape[-1]
-                cnn = nn.Sequential(
-                    nn.Conv2d(
-                        in_channels=in_channels,
-                        out_channels=32,
-                        kernel_size=8,
-                        stride=4,
-                        padding=0,
-                    ),
-                    nn.ReLU(),
-                    nn.Conv2d(
-                        in_channels=32,
-                        out_channels=64,
-                        kernel_size=4,
-                        stride=2,
-                        padding=0,
-                    ),
-                    nn.ReLU(),
-                    nn.Conv2d(
-                        in_channels=64,
-                        out_channels=64,
-                        kernel_size=3,
-                        stride=1,
-                        padding=0,
-                    ),
-                    nn.ReLU(),
-                    nn.Flatten(),
-                )
-
-                # to easily figure out the dimensions after flattening, we pass a test tensor
-                test_tensor = th.zeros(
-                    [subspace.shape[2], subspace.shape[0], subspace.shape[1]]
-                )
-                with th.no_grad():
-                    n_flatten = cnn(test_tensor[None]).shape[1]
-                fc = nn.Sequential(nn.Linear(n_flatten, feature_size), nn.ReLU())
-                extractors["rgbd"] = nn.Sequential(cnn, fc)
-                total_concat_size += feature_size
-            elif key == "state":
-                # for state data we simply pass it through a single linear layer
-                state_size = subspace.shape[0]
-                extractors["state"] = nn.Linear(state_size, 64)
-                total_concat_size += 64
-
-        self.extractors = nn.ModuleDict(extractors)
-        self._features_dim = total_concat_size
-
-    def forward(self, observations) -> th.Tensor:
-        encoded_tensor_list = []
-        # self.extractors contain nn.Modules that do all the processing.
-        for key, extractor in self.extractors.items():
-            if key == "rgbd":
-                observations[key] = observations[key].permute((0, 3, 1, 2))
-            encoded_tensor_list.append(extractor(observations[key]))
-        # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
-        return th.cat(encoded_tensor_list, dim=1)
 
 
 def parse_args():
@@ -209,7 +143,7 @@ def parse_args():
         "-n",
         "--n-envs",
         type=int,
-        default=8,
+        default=32,
         help="number of parallel envs to run. Note that increasing this does not increase rollout size",
     )
     parser.add_argument(
@@ -346,7 +280,7 @@ def main():
         "MultiInputPolicy",
         env,
         n_steps=rollout_steps // num_envs,
-        batch_size=400,
+        batch_size=100,
         n_epochs=5,
         gamma=0.8,
         target_kl=0.2,

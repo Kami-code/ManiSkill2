@@ -148,7 +148,7 @@ class ExcavateEnv(MPMBaseEnv):
 
     def _register_cameras(self):
         p, q = [-0.2, -0, 0.4], euler2quat(0, np.pi / 6, 0)
-        return CameraConfig("base_camera", p, q, 128, 128, np.pi / 2, 0.001, 10)
+        return CameraConfig("base_camera", p, q, 224, 224, np.pi / 2, 0.001, 10)
 
     def _register_render_cameras(self):
         p, q = [-0.35, -0, 0.4], euler2quat(0, np.pi / 6, 0)

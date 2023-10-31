@@ -128,7 +128,7 @@ class ManiSkill2Dataset(Dataset):
 
 
 class NatureCNN(nn.Module):
-    def __init__(self, image_size=(128, 128), in_channels=8, state_size=42):
+    def __init__(self, image_size=(224, 224), in_channels=8, state_size=42):
         super().__init__()
 
         extractors = {}
@@ -182,7 +182,7 @@ class NatureCNN(nn.Module):
 class Policy(nn.Module):
     def __init__(
         self,
-        image_size=(128, 128),
+        image_size=(224, 224),
         in_channels=8,
         state_size=42,
         hidden_units=[128, 128],

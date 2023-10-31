@@ -77,7 +77,7 @@ class StationaryManipulationEnv(BaseEnv):
     def _register_cameras(self):
         pose = look_at([0.2, 0, 0.4], [0, 0, 0])
         return CameraConfig(
-            "base_camera", pose.p, pose.q, 128, 128, np.pi / 2, 0.01, 10
+            "base_camera", pose.p, pose.q, 224, 224, np.pi / 2, 0.01, 10
         )
 
     def _register_render_cameras(self):
