@@ -348,60 +348,60 @@ if __name__ == "__main__":
         print(f"Epoch: {iteration}, global_step={global_step}")
         final_values = torch.zeros((args.num_steps, args.num_envs), device=device)
         agent.eval()
-        if iteration % args.eval_freq == 1:
-            # evaluate
+        # if iteration % args.eval_freq == 1:
+        #     # evaluate
+        #
+        #     print(f"GPU memory consumed before evaluation: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+        #     print("Evaluating")
+        #     eval_envs.reset()
+        #     returns = []
+        #     eps_lens = []
+        #     successes = []
+        #     failures = []
+        #     for _ in range(args.num_eval_steps):
+        #         with torch.no_grad():
+        #             eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_pc, eval_state, deterministic=True))
+        #             eval_pc, eval_state = get_state_and_pc(eval_obs, env_obs_space, envs_origin_state_dim)
+        #             if "final_info" in eval_infos:
+        #                 mask = eval_infos["_final_info"]
+        #                 eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
+        #                 returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
+        #                 if "success" in eval_infos:
+        #                     successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
+        #                 if "fail" in eval_infos:
+        #                     failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
+        #     returns = np.concatenate(returns)
+        #     eps_lens = np.concatenate(eps_lens)
+        #     print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
+        #     if len(successes) > 0:
+        #         successes = np.concatenate(successes)
+        #         if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
+        #         print(f"eval_success_rate={successes.mean()}")
+        #     if len(failures) > 0:
+        #         failures = np.concatenate(failures)
+        #         if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
+        #         print(f"eval_fail_rate={failures.mean()}")
+        #
+        #     print(f"eval_episodic_return={returns.mean()}")
+        #     if writer is not None:
+        #         writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
+        #         writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+        #
+        #
+        #     print(f"GPU memory consumed after evaluation: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+        #     if args.evaluate:
+        #         break
 
-            print(f"GPU memory consumed before evaluation: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
-            print("Evaluating")
-            eval_envs.reset()
-            returns = []
-            eps_lens = []
-            successes = []
-            failures = []
-            for _ in range(args.num_eval_steps):
-                with torch.no_grad():
-                    eval_obs, _, eval_terminations, eval_truncations, eval_infos = eval_envs.step(agent.get_action(eval_pc, eval_state, deterministic=True))
-                    eval_pc, eval_state = get_state_and_pc(eval_obs, env_obs_space, envs_origin_state_dim)
-                    if "final_info" in eval_infos:
-                        mask = eval_infos["_final_info"]
-                        eps_lens.append(eval_infos["final_info"]["elapsed_steps"][mask].cpu().numpy())
-                        returns.append(eval_infos["final_info"]["episode"]["r"][mask].cpu().numpy())
-                        if "success" in eval_infos:
-                            successes.append(eval_infos["final_info"]["success"][mask].cpu().numpy())
-                        if "fail" in eval_infos:
-                            failures.append(eval_infos["final_info"]["fail"][mask].cpu().numpy())
-            returns = np.concatenate(returns)
-            eps_lens = np.concatenate(eps_lens)
-            print(f"Evaluated {args.num_eval_steps * args.num_envs} steps resulting in {len(eps_lens)} episodes")
-            if len(successes) > 0:
-                successes = np.concatenate(successes)
-                if writer is not None: writer.add_scalar("charts/eval_success_rate", successes.mean(), global_step)
-                print(f"eval_success_rate={successes.mean()}")
-            if len(failures) > 0:
-                failures = np.concatenate(failures)
-                if writer is not None: writer.add_scalar("charts/eval_fail_rate", failures.mean(), global_step)
-                print(f"eval_fail_rate={failures.mean()}")
 
-            print(f"eval_episodic_return={returns.mean()}")
-            if writer is not None:
-                writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
-                writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
-
-
-            print(f"GPU memory consumed after evaluation: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
-            if args.evaluate:
-                break
-
-
-        if args.save_model and iteration % args.eval_freq == 1:
-            model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
-            torch.save(agent.state_dict(), model_path)
-            print(f"model saved to {model_path}")
-        # Annealing the rate if instructed to do so.
-        if args.anneal_lr:
-            frac = 1.0 - (iteration - 1.0) / args.num_iterations
-            lrnow = frac * args.learning_rate
-            optimizer.param_groups[0]["lr"] = lrnow
+        # if args.save_model and iteration % args.eval_freq == 1:
+        #     model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
+        #     torch.save(agent.state_dict(), model_path)
+        #     print(f"model saved to {model_path}")
+        # # Annealing the rate if instructed to do so.
+        # if args.anneal_lr:
+        #     frac = 1.0 - (iteration - 1.0) / args.num_iterations
+        #     lrnow = frac * args.learning_rate
+        #     optimizer.param_groups[0]["lr"] = lrnow
 
         print(f"GPU memory consumed before rollout: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
@@ -468,132 +468,132 @@ if __name__ == "__main__":
         print(f"GPU memory consumed after rollout: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
         # bootstrap value according to termination and truncation
-        with torch.no_grad():
-            next_value = agent.get_value(next_pc, next_state).reshape(1, -1)
-            advantages = torch.zeros_like(rewards).to(device)
-            lastgaelam = 0
-            for t in reversed(range(args.num_steps)):
-                if t == args.num_steps - 1:
-                    next_not_done = 1.0 - next_done
-                    nextvalues = next_value
-                else:
-                    next_not_done = 1.0 - dones[t + 1]
-                    nextvalues = values[t + 1]
-                real_next_values = next_not_done * nextvalues + final_values[t]  # t instead of t+1
-                # next_not_done means nextvalues is computed from the correct next_obs
-                # if next_not_done is 1, final_values is always 0
-                # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
-                if args.finite_horizon_gae:
-                    """
-                    See GAE paper equation(16) line 1, we will compute the GAE based on this line only
-                    1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )  
-                    lambda        *(  -V(s_t)  + r_t + gamma * r_{t+1}                                             + gamma^2 * V(s_{t+2}) )
-                    lambda^2      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2}                         + ...                  )
-                    lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}    
-                    We then normalize it by the sum of the lambda^i (instead of 1-lambda)
-                    """
-                    if t == args.num_steps - 1: # initialize
-                        lam_coef_sum = 0.
-                        reward_term_sum = 0. # the sum of the second term
-                        value_term_sum = 0. # the sum of the third term
-                    lam_coef_sum = lam_coef_sum * next_not_done
-                    reward_term_sum = reward_term_sum * next_not_done
-                    value_term_sum = value_term_sum * next_not_done
-
-                    lam_coef_sum = 1 + args.gae_lambda * lam_coef_sum
-                    reward_term_sum = args.gae_lambda * args.gamma * reward_term_sum + lam_coef_sum * rewards[t]
-                    value_term_sum = args.gae_lambda * args.gamma * value_term_sum + args.gamma * real_next_values
-
-                    advantages[t] = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
-                else:
-                    delta = rewards[t] + args.gamma * real_next_values - values[t]
-                    advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
-            returns = advantages + values
-
-
-        print(f"GPU memory consumed after bootstrap: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
-        # flatten the batch
-        b_obs_state = obs_state.reshape((-1, envs_origin_state_dim))
-        b_obs_pc = obs_pc.reshape((-1,) + envs_original_pointcloud_shape)
+        # with torch.no_grad():
+        #     next_value = agent.get_value(next_pc, next_state).reshape(1, -1)
+        #     advantages = torch.zeros_like(rewards).to(device)
+        #     lastgaelam = 0
+        #     for t in reversed(range(args.num_steps)):
+        #         if t == args.num_steps - 1:
+        #             next_not_done = 1.0 - next_done
+        #             nextvalues = next_value
+        #         else:
+        #             next_not_done = 1.0 - dones[t + 1]
+        #             nextvalues = values[t + 1]
+        #         real_next_values = next_not_done * nextvalues + final_values[t]  # t instead of t+1
+        #         # next_not_done means nextvalues is computed from the correct next_obs
+        #         # if next_not_done is 1, final_values is always 0
+        #         # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
+        #         if args.finite_horizon_gae:
+        #             """
+        #             See GAE paper equation(16) line 1, we will compute the GAE based on this line only
+        #             1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )
+        #             lambda        *(  -V(s_t)  + r_t + gamma * r_{t+1}                                             + gamma^2 * V(s_{t+2}) )
+        #             lambda^2      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2}                         + ...                  )
+        #             lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
+        #             We then normalize it by the sum of the lambda^i (instead of 1-lambda)
+        #             """
+        #             if t == args.num_steps - 1: # initialize
+        #                 lam_coef_sum = 0.
+        #                 reward_term_sum = 0. # the sum of the second term
+        #                 value_term_sum = 0. # the sum of the third term
+        #             lam_coef_sum = lam_coef_sum * next_not_done
+        #             reward_term_sum = reward_term_sum * next_not_done
+        #             value_term_sum = value_term_sum * next_not_done
+        #
+        #             lam_coef_sum = 1 + args.gae_lambda * lam_coef_sum
+        #             reward_term_sum = args.gae_lambda * args.gamma * reward_term_sum + lam_coef_sum * rewards[t]
+        #             value_term_sum = args.gae_lambda * args.gamma * value_term_sum + args.gamma * real_next_values
+        #
+        #             advantages[t] = (reward_term_sum + value_term_sum) / lam_coef_sum - values[t]
+        #         else:
+        #             delta = rewards[t] + args.gamma * real_next_values - values[t]
+        #             advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
+        #     returns = advantages + values
 
 
-        b_logprobs = logprobs.reshape(-1)
-        b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
-        b_advantages = advantages.reshape(-1)
-        b_returns = returns.reshape(-1)
-        b_values = values.reshape(-1)
-
-        # Optimizing the policy and value network
-        agent.train()
-        b_inds = np.arange(args.batch_size)
-        clipfracs = []
-        for epoch in range(args.update_epochs):
-            np.random.shuffle(b_inds)
-            for start in range(0, args.batch_size, args.minibatch_size):
-                end = start + args.minibatch_size
-                mb_inds = b_inds[start:end]
-
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs_pc[mb_inds], b_obs_state[mb_inds], b_actions[mb_inds])
-                logratio = newlogprob - b_logprobs[mb_inds]
-                ratio = logratio.exp()
-
-                with torch.no_grad():
-                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
-                    old_approx_kl = (-logratio).mean()
-                    approx_kl = ((ratio - 1) - logratio).mean()
-                    clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
-
-                mb_advantages = b_advantages[mb_inds]
-                if args.norm_adv:
-                    mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
-
-                # Policy loss
-                pg_loss1 = -mb_advantages * ratio
-                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
-                pg_loss = torch.max(pg_loss1, pg_loss2).mean()
-
-                # Value loss
-                newvalue = newvalue.view(-1)
-                if args.clip_vloss:
-                    v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
-                    v_clipped = b_values[mb_inds] + torch.clamp(
-                        newvalue - b_values[mb_inds],
-                        -args.clip_coef,
-                        args.clip_coef,
-                    )
-                    v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
-                    v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-                    v_loss = 0.5 * v_loss_max.mean()
-                else:
-                    v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
-
-                entropy_loss = entropy.mean()
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
-
-                optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
-                optimizer.step()
-
-            if args.target_kl is not None and approx_kl > args.target_kl:
-                break
-
-        print(f"GPU memory consumed after optimization: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
-        y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
-        var_y = np.var(y_true)
-        explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-
-        # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
-        writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-        writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-        writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
-        writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-        writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        # print(f"GPU memory consumed after bootstrap: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+        # # flatten the batch
+        # b_obs_state = obs_state.reshape((-1, envs_origin_state_dim))
+        # b_obs_pc = obs_pc.reshape((-1,) + envs_original_pointcloud_shape)
+        #
+        #
+        # b_logprobs = logprobs.reshape(-1)
+        # b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+        # b_advantages = advantages.reshape(-1)
+        # b_returns = returns.reshape(-1)
+        # b_values = values.reshape(-1)
+        #
+        # # Optimizing the policy and value network
+        # agent.train()
+        # b_inds = np.arange(args.batch_size)
+        # clipfracs = []
+        # for epoch in range(args.update_epochs):
+        #     np.random.shuffle(b_inds)
+        #     for start in range(0, args.batch_size, args.minibatch_size):
+        #         end = start + args.minibatch_size
+        #         mb_inds = b_inds[start:end]
+        #
+        #         _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs_pc[mb_inds], b_obs_state[mb_inds], b_actions[mb_inds])
+        #         logratio = newlogprob - b_logprobs[mb_inds]
+        #         ratio = logratio.exp()
+        #
+        #         with torch.no_grad():
+        #             # calculate approx_kl http://joschu.net/blog/kl-approx.html
+        #             old_approx_kl = (-logratio).mean()
+        #             approx_kl = ((ratio - 1) - logratio).mean()
+        #             clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+        #
+        #         mb_advantages = b_advantages[mb_inds]
+        #         if args.norm_adv:
+        #             mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
+        #
+        #         # Policy loss
+        #         pg_loss1 = -mb_advantages * ratio
+        #         pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - args.clip_coef, 1 + args.clip_coef)
+        #         pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+        #
+        #         # Value loss
+        #         newvalue = newvalue.view(-1)
+        #         if args.clip_vloss:
+        #             v_loss_unclipped = (newvalue - b_returns[mb_inds]) ** 2
+        #             v_clipped = b_values[mb_inds] + torch.clamp(
+        #                 newvalue - b_values[mb_inds],
+        #                 -args.clip_coef,
+        #                 args.clip_coef,
+        #             )
+        #             v_loss_clipped = (v_clipped - b_returns[mb_inds]) ** 2
+        #             v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
+        #             v_loss = 0.5 * v_loss_max.mean()
+        #         else:
+        #             v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
+        #
+        #         entropy_loss = entropy.mean()
+        #         loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+        #
+        #         optimizer.zero_grad()
+        #         loss.backward()
+        #         nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
+        #         optimizer.step()
+        #
+        #     if args.target_kl is not None and approx_kl > args.target_kl:
+        #         break
+        #
+        # print(f"GPU memory consumed after optimization: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+        # y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
+        # var_y = np.var(y_true)
+        # explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+        #
+        # # TRY NOT TO MODIFY: record rewards for plotting purposes
+        # writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        # writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+        # writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+        # writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        # writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        # writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+        # writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+        # writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        # print("SPS:", int(global_step / (time.time() - start_time)))
+        # writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     if not args.evaluate:
         if args.save_model:
