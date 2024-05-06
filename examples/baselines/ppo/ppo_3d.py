@@ -278,11 +278,9 @@ if __name__ == "__main__":
     eval_envs = ManiSkillVectorEnv(eval_envs, args.num_eval_envs, ignore_terminations=not args.partial_reset, **env_kwargs)
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
+    print(f"GPU memory consumed after env setup: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
-
-
-
-    envs_origin_state_dim =  0
+    envs_origin_state_dim = 0
     envs_origin_state_keys = []
     env_obs_space = envs.single_observation_space
     if not pc_and_goal_only:
@@ -301,6 +299,7 @@ if __name__ == "__main__":
     agent = Agent(envs_origin_state_dim).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
+    print(f"GPU memory consumed after agent setup: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
     envs_original_pointcloud_shape = (16384, 3)
 
@@ -308,6 +307,7 @@ if __name__ == "__main__":
     obs_state = torch.zeros((args.num_steps, args.num_envs, envs_origin_state_dim)).to(device)
     obs_pc = torch.zeros((args.num_steps, args.num_envs) + envs_original_pointcloud_shape).to(device)
 
+    print(f"GPU memory consumed after storage setup: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
     actions = torch.zeros((args.num_steps, args.num_envs,) + envs.single_action_space.shape).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -333,11 +333,16 @@ if __name__ == "__main__":
     print(f"args.minibatch_size={args.minibatch_size} args.batch_size={args.batch_size} args.update_epochs={args.update_epochs}")
     print(f"####")
     action_space_low, action_space_high = torch.from_numpy(envs.single_action_space.low).to(device), torch.from_numpy(envs.single_action_space.high).to(device)
+
+
     def clip_action(action: torch.Tensor):
         return torch.clamp(action.detach(), action_space_low, action_space_high)
 
+
     if args.checkpoint:
         agent.load_state_dict(torch.load(args.checkpoint))
+
+    print(f"GPU memory consumed before training loop: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
     for iteration in range(1, args.num_iterations + 1):
         print(f"Epoch: {iteration}, global_step={global_step}")
@@ -345,6 +350,8 @@ if __name__ == "__main__":
         agent.eval()
         if iteration % args.eval_freq == 1:
             # evaluate
+
+            print(f"GPU memory consumed before evaluation: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             print("Evaluating")
             eval_envs.reset()
             returns = []
@@ -379,8 +386,13 @@ if __name__ == "__main__":
             if writer is not None:
                 writer.add_scalar("charts/eval_episodic_return", returns.mean(), global_step)
                 writer.add_scalar("charts/eval_episodic_length", eps_lens.mean(), global_step)
+
+
+            print(f"GPU memory consumed after evaluation: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             if args.evaluate:
                 break
+
+
         if args.save_model and iteration % args.eval_freq == 1:
             model_path = f"runs/{run_name}/{args.exp_name}_{iteration}.cleanrl_model"
             torch.save(agent.state_dict(), model_path)
@@ -391,6 +403,8 @@ if __name__ == "__main__":
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
+        print(f"GPU memory consumed before rollout: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs_pc[step] = next_pc
@@ -399,32 +413,59 @@ if __name__ == "__main__":
             dones[step] = next_done
 
             # ALGO LOGIC: action logic
+
+            print(f"GPU memory consumed in rollout01: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             with torch.no_grad():
                 action, logprob, _, value = agent.get_action_and_value(next_pc, next_state)
                 values[step] = value.flatten()
+
+            print(f"GPU memory consumed in rollout02: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             actions[step] = action
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
+
+            print(f"GPU memory consumed in rollout03: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             next_obs, reward, terminations, truncations, infos = envs.step(clip_action(action))
+            print(f"GPU memory consumed in rollout031: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             next_obs = next_obs['pointcloud']['xyzw'][..., :3]
+            print(f"GPU memory consumed in rollout032: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             next_done = torch.logical_or(terminations, truncations).to(torch.float32)
+            print(f"GPU memory consumed in rollout033: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
             rewards[step] = reward.view(-1)
+            print(f"GPU memory consumed in rollout04: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+
 
             if "final_info" in infos:
                 final_info = infos["final_info"]
                 done_mask = final_info["_final_info"]
                 episodic_return = final_info['episode']['r'][done_mask].cpu().numpy().mean()
+
+                print(f"GPU memory consumed in rollout041: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
                 if "success" in final_info:
                     writer.add_scalar("charts/success_rate", final_info["success"][done_mask].cpu().numpy().mean(), global_step)
+                    print(f"GPU memory consumed in rollout042: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
                 if "fail" in final_info:
                     writer.add_scalar("charts/fail_rate", final_info["fail"][done_mask].cpu().numpy().mean(), global_step)
+
+                    print(f"GPU memory consumed in rollout043: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
                 writer.add_scalar("charts/episodic_return", episodic_return, global_step)
+
+                print(f"GPU memory consumed in rollout044: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
                 writer.add_scalar("charts/episodic_length", final_info["elapsed_steps"][done_mask].cpu().numpy().mean(), global_step)
 
+                print(f"GPU memory consumed in rollout045: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+
+            # clean the gpu cache
+            torch.cuda.empty_cache()
+            # clean the memory
+            del action, logprob, value
+            del next_obs, reward, terminations, truncations, infos
             #     temp = agent.get_value(final_info["final_observation"][done_mask]).view(-1)
             #
             #     final_values[step, torch.arange(args.num_envs, device=device)[done_mask]] = temp
+
+        print(f"GPU memory consumed after rollout: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
         # bootstrap value according to termination and truncation
         with torch.no_grad():
@@ -438,17 +479,17 @@ if __name__ == "__main__":
                 else:
                     next_not_done = 1.0 - dones[t + 1]
                     nextvalues = values[t + 1]
-                real_next_values = next_not_done * nextvalues + final_values[t] # t instead of t+1
+                real_next_values = next_not_done * nextvalues + final_values[t]  # t instead of t+1
                 # next_not_done means nextvalues is computed from the correct next_obs
                 # if next_not_done is 1, final_values is always 0
                 # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
                 if args.finite_horizon_gae:
                     """
                     See GAE paper equation(16) line 1, we will compute the GAE based on this line only
-                    1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )
+                    1             *(  -V(s_t)  + r_t                                                               + gamma * V(s_{t+1})   )  
                     lambda        *(  -V(s_t)  + r_t + gamma * r_{t+1}                                             + gamma^2 * V(s_{t+2}) )
                     lambda^2      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2}                         + ...                  )
-                    lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}
+                    lambda^3      *(  -V(s_t)  + r_t + gamma * r_{t+1} + gamma^2 * r_{t+2} + gamma^3 * r_{t+3}    
                     We then normalize it by the sum of the lambda^i (instead of 1-lambda)
                     """
                     if t == args.num_steps - 1: # initialize
@@ -469,6 +510,8 @@ if __name__ == "__main__":
                     advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_not_done * lastgaelam # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
             returns = advantages + values
 
+
+        print(f"GPU memory consumed after bootstrap: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
         # flatten the batch
         b_obs_state = obs_state.reshape((-1, envs_origin_state_dim))
         b_obs_pc = obs_pc.reshape((-1,) + envs_original_pointcloud_shape)
@@ -535,6 +578,7 @@ if __name__ == "__main__":
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
 
+        print(f"GPU memory consumed after optimization: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
