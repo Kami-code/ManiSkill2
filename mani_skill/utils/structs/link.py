@@ -57,7 +57,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     ):
         return cls(
             _objs=physx_links,
-            _scene=scene,
+            scene=scene,
             _scene_idxs=scene_idxs,
             _body_data_name="cuda_rigid_body_data"
             if isinstance(scene.px, physx.PhysxGpuSystem)
@@ -91,7 +91,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             ), "Each given link must have the same number of managed objects"
         merged_scene_idxs = torch.concat(merged_scene_idxs)
         merged_link = Link.create(
-            objs, scene=links[0]._scene, scene_idxs=merged_scene_idxs
+            objs, scene=links[0].scene, scene_idxs=merged_scene_idxs
         )
         if not is_root:
             merged_active_joint_indexes = torch.concat(merged_active_joint_indexes)
@@ -99,7 +99,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             merged_joint = ArticulationJoint.create(
                 joint_objs,
                 physx_articulations=articulation_objs,
-                scene=links[0]._scene,
+                scene=links[0].scene,
                 scene_idxs=merged_scene_idxs,
                 joint_index=merged_joint_indexes,
                 active_joint_index=merged_active_joint_indexes,
@@ -172,10 +172,13 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
             bboxes.append(merged_mesh.bounding_box)
         return bboxes
 
-    # TODO (stao): is there a easy way to implement this
-    # @cached_property
-    # def index_q(self) -> torch.Tensor:
-    #     """The indexes of the managed link objects in their respective articulations. These correspond with position in the qpos and qvel of articulations"""
+    def set_collision_group_bit(self, group: int, bit_idx: int, bit: int):
+        """Set's a specific collision group bit for all collision shapes in all parallel actors"""
+        for body in self._bodies:
+            for cs in body.get_collision_shapes():
+                cg = cs.collision_groups
+                cg[group] |= bit << bit_idx
+                cs.set_collision_groups(cg)
 
     # -------------------------------------------------------------------------- #
     # Functions from sapien.Component
@@ -195,7 +198,7 @@ class Link(PhysxRigidBodyComponentStruct[physx.PhysxArticulationLinkComponent]):
     def pose(self, arg1: Union[Pose, sapien.Pose]) -> None:
         if physx.is_gpu_enabled():
             self.px.cuda_rigid_body_data.torch()[
-                self._body_data_index[self._scene._reset_mask[self._scene_idxs]], :7
+                self._body_data_index[self.scene._reset_mask[self._scene_idxs]], :7
             ] = vectorize_pose(arg1)
         else:
             if isinstance(arg1, sapien.Pose):

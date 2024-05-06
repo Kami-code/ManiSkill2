@@ -343,6 +343,15 @@ def parse_args(args=None):
         type=str,
         help="Change shader used for rendering. Default is 'default' which is very fast. Can also be 'rt' for ray tracing and generating photo-realistic renders. Can also be 'rt-fast' for a faster but lower quality ray-traced renderer",
     )
+    parser.add_argument(
+        "--video-fps", default=30, type=int, help="The FPS of saved videos"
+    )
+    parser.add_argument(
+        "--render-mode",
+        default="rgb_array",
+        type=str,
+        help="The render mode used in the video saving",
+    )
 
     return parser.parse_args(args)
 
@@ -380,7 +389,9 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
     env_kwargs["reward_mode"] = args.reward_mode
     env_kwargs[
         "render_mode"
-    ] = "rgb_array"  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
+    ] = (
+        args.render_mode
+    )  # note this only affects the videos saved as RecordEpisode wrapper calls env.render
 
     # handle warnings/errors for replaying trajectories generated during GPU simulation
     if "num_envs" in env_kwargs:
@@ -418,6 +429,7 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
         save_trajectory=args.save_traj,
         trajectory_name=new_traj_name,
         save_video=args.save_video,
+        video_fps=args.video_fps,
         record_reward=args.record_rewards,
     )
 
@@ -520,8 +532,6 @@ def _main(args, proc_id: int = 0, num_procs=1, pbar=None):
                     env.flush_video(ignore_empty_transition=False)
                 break
             else:
-                # Rollback episode id for failed attempts
-                env._episode_id -= 1
                 if args.verbose:
                     print("info", info)
         else:

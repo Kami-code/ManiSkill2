@@ -10,6 +10,10 @@ import torch
 from gymnasium import spaces
 
 from mani_skill import format_path
+from mani_skill.agents.controllers.pd_joint_pos import (
+    PDJointPosController,
+    PDJointPosControllerConfig,
+)
 from mani_skill.sensors.base_sensor import BaseSensor, BaseSensorConfig
 from mani_skill.utils import sapien_utils
 from mani_skill.utils.structs import Actor, Array, Articulation, Pose
@@ -29,7 +33,7 @@ DictControllerConfig = Dict[str, ControllerConfig]
 @dataclass
 class Keyframe:
     pose: sapien.Pose
-    qpos: Array
+    qpos: Optional[Array] = None
     qvel: Optional[Array] = None
 
 
@@ -60,6 +64,10 @@ class BaseAgent:
     """Whether to fix the root link of the robot"""
     load_multiple_collisions: bool = False
     """Whether the referenced collision meshes of a robot definition should be loaded as multiple convex collisions"""
+    disable_self_collisions: bool = False
+    """Whether to disable self collisions. This is generally not recommended as you should be defining a SRDF file to exclude specific collisions.
+    However for some robots/tasks it may be easier to disable all self collisions between links in the robot to increase simulation speed
+    """
 
     keyframes: Dict[str, Keyframe] = dict()
     """a dict of predefined keyframes similar to what Mujoco does that you can use to reset the agent to that may be of interest"""
@@ -101,7 +109,26 @@ class BaseAgent:
     def _controller_configs(
         self,
     ) -> Dict[str, Union[ControllerConfig, DictControllerConfig]]:
-        raise NotImplementedError()
+
+        return dict(
+            pd_joint_pos=PDJointPosControllerConfig(
+                [x.name for x in self.robot.active_joints],
+                lower=None,
+                upper=None,
+                stiffness=100,
+                damping=10,
+                normalize_action=False,
+            ),
+            pd_joint_delta_pos=PDJointPosControllerConfig(
+                [x.name for x in self.robot.active_joints],
+                lower=-0.1,
+                upper=0.1,
+                stiffness=100,
+                damping=10,
+                normalize_action=True,
+                use_delta=True,
+            ),
+        )
 
     @property
     def device(self):
@@ -123,9 +150,10 @@ class BaseAgent:
             loader.name = f"{self.uid}-agent-{self._agent_idx}"
         loader.fix_root_link = self.fix_root_link
         loader.load_multiple_collisions_from_file = self.load_multiple_collisions
+        loader.disable_self_collisions = self.disable_self_collisions
 
         if self.urdf_config is not None:
-            urdf_config = sapien_utils.parse_urdf_config(self.urdf_config, self.scene)
+            urdf_config = sapien_utils.parse_urdf_config(self.urdf_config)
             sapien_utils.check_urdf_config(urdf_config)
             sapien_utils.apply_urdf_config(loader, urdf_config)
 
@@ -165,8 +193,8 @@ class BaseAgent:
         # create controller on the fly here
         if control_mode not in self.controllers:
             config = self._controller_configs[self._control_mode]
+            balance_passive_force = True
             if isinstance(config, dict):
-                balance_passive_force = True
                 if "balance_passive_force" in config:
                     balance_passive_force = config.pop("balance_passive_force")
                 self.controllers[control_mode] = CombinedController(
@@ -174,17 +202,13 @@ class BaseAgent:
                     self.robot,
                     self._control_freq,
                     scene=self.scene,
-                    balance_passive_force=balance_passive_force,
                 )
             else:
                 self.controllers[control_mode] = config.controller_cls(
                     config, self.robot, self._control_freq, scene=self.scene
                 )
             self.controllers[control_mode].set_drive_property()
-            if (
-                isinstance(self.controllers[control_mode], DictController)
-                and self.controllers[control_mode].balance_passive_force
-            ):
+            if balance_passive_force:
                 # NOTE (stao): Balancing passive force is currently not supported in PhysX, so we work around by disabling gravity
                 for link in self.robot.links:
                     link.disable_gravity = True

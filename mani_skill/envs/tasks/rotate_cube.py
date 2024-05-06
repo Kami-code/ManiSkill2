@@ -84,14 +84,14 @@ class RotateCubeEnv(BaseEnv):
         return CameraConfig("render_camera", pose, 512, 512, 1, 0.01, 100)
 
     def _load_scene(self, options: dict):
-        self.ground = build_ground(self._scene, altitude=0)
-        loader1 = self._scene.create_urdf_loader()
+        self.ground = build_ground(self.scene, altitude=0)
+        loader1 = self.scene.create_urdf_loader()
         loader1.fix_root_link = True
         loader1.name = "table"
         urdf_path = f"{PACKAGE_ASSET_DIR}/robots/trifinger/table_without_border.urdf"
         table: Articulation = loader1.load(urdf_path)
 
-        builder: ActorBuilder = self._scene.create_actor_builder()
+        builder: ActorBuilder = self.scene.create_actor_builder()
         high_table_boundary_file_name = f"{PACKAGE_ASSET_DIR}/robots/trifinger/robot_properties_fingers/meshes/high_table_boundary.stl"
         builder.add_nonconvex_collision_from_file(
             filename=high_table_boundary_file_name, scale=[1, 1, 1], material=None
@@ -100,7 +100,7 @@ class RotateCubeEnv(BaseEnv):
         table_boundary: Actor = builder.build_static("table2")
 
         self.obj = actors.build_colorful_cube(
-            self._scene,
+            self.scene,
             half_size=self.size / 2,
             color=np.array([169, 42, 12, 255]) / 255,
             name="cube",
@@ -109,7 +109,7 @@ class RotateCubeEnv(BaseEnv):
         )
 
         self.obj_goal = actors.build_colorful_cube(
-            self._scene,
+            self.scene,
             half_size=self.size / 2,
             color=np.array([12, 160, 42, 255]) / 255,
             name="cube_goal",
@@ -348,8 +348,7 @@ class RotateCubeEnv(BaseEnv):
         return norm_dense_reward
 
 
-# TODO (stao): pick a better name, TrifingerRotateCube? perhaps?
-@register_env("RotateCubeLevel0-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel0-v1", max_episode_steps=250)
 class RotateCubeEnvLevel0(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -360,7 +359,7 @@ class RotateCubeEnvLevel0(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel1-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel1-v1", max_episode_steps=250)
 class RotateCubeEnvLevel1(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -371,7 +370,7 @@ class RotateCubeEnvLevel1(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel2-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel2-v1", max_episode_steps=250)
 class RotateCubeEnvLevel2(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -382,7 +381,7 @@ class RotateCubeEnvLevel2(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel3-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel3-v1", max_episode_steps=250)
 class RotateCubeEnvLevel3(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(
@@ -393,7 +392,7 @@ class RotateCubeEnvLevel3(RotateCubeEnv):
         )
 
 
-@register_env("RotateCubeLevel4-v1", max_episode_steps=250)
+@register_env("TriFingerRotateCubeLevel4-v1", max_episode_steps=250)
 class RotateCubeEnvLevel4(RotateCubeEnv):
     def __init__(self, *args, **kwargs):
         super().__init__(

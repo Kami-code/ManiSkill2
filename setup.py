@@ -1,14 +1,15 @@
 from setuptools import find_packages, setup
 
-__version__ = "3.0.0.dev13"
+__version__ = "3.0.0b2"
 
-long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible. Among its features, it includes
-- GPU parallelized visual data collection system. A policy can collect RGBD + Segmentation data at about 10,000+ FPS with 1 GPU, 10-100x faster than any other simulator
-- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, scene-level manipulation)
-- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation at the same or faster speed as other GPU sims like IsaacSim
+long_description = """ManiSkill is a powerful unified framework for robot simulation and training powered by [SAPIEN](https://sapien.ucsd.edu/). The entire stack is as open-source as possible and ManiSkill v3 is in beta release now. Among its features include:
+- GPU parallelized visual data collection system. On the high end you can collect RGBD + Segmentation data at 20k FPS with a 4090 GPU, 10-100x faster compared to most other simulators.
+- Example tasks covering a wide range of different robot embodiments (quadruped, mobile manipulators, single-arm robots) as well as a wide range of different tasks (table-top, locomotion, dextrous manipulation)
+- GPU parallelized tasks, enabling incredibly fast synthetic data collection in simulation
 - GPU parallelized tasks support simulating diverse scenes where every parallel environment has a completely different scene/set of objects
-- Flexible task building API
-Please refer our [documentation](https://maniskill.readthedocs.io/en/dev) to learn more information."""
+- Flexible task building API that abstracts away much of the complex GPU memory management code
+
+Please refer our [documentation](https://maniskill.readthedocs.io/en/latest) to learn more information."""
 
 setup(
     name="mani_skill",
@@ -26,7 +27,7 @@ setup(
         "scipy",
         "dacite",
         "gymnasium==0.29.1",
-        "sapien==3.0.0.dev2",
+        "sapien==3.0.0.b0",
         "h5py",
         "pyyaml",
         "tqdm",
@@ -39,7 +40,8 @@ setup(
         "imageio",
         "imageio[ffmpeg]",
         "mplib>=0.1.1",
-        "fast_kinematics==0.0.1",
+        "fast_kinematics==0.2.2",
+        "IPython",
         "huggingface_hub",  # we use HF to version control some assets/datasets more easily
     ],
     # Glob patterns do not automatically match dotfiles

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Dict, Sequence, Union
 import numpy as np
 import sapien
 import sapien.render
+from torch._tensor import Tensor
 
 from mani_skill.utils.structs import Actor, Articulation, Link
 from mani_skill.utils.structs.pose import Pose
@@ -14,7 +15,7 @@ from mani_skill.utils.structs.types import Array
 if TYPE_CHECKING:
     from mani_skill.envs.scene import ManiSkillScene
 
-from mani_skill.utils import sapien_utils
+from mani_skill.utils import sapien_utils, visualization
 
 from .base_sensor import BaseSensor, BaseSensorConfig
 
@@ -42,8 +43,6 @@ class CameraConfig(BaseSensorConfig):
     """entity_uid (str, optional): unique id of the entity to mount the camera. Defaults to None."""
     mount: Union[Actor, Link] = None
     """the Actor or Link to mount the camera on top of. This means the global pose of the mounted camera is now mount.pose * local_pose"""
-    hide_link: bool = False
-    """hide_link (bool, optional): whether to hide the link to mount the camera. Defaults to False."""
     texture_names: Sequence[str] = ("Color", "PositionSegmentation")
     """texture_names (Sequence[str], optional): texture names to render. Defaults to ("Color", "PositionSegmentation"). Note that the renderign speed will not really change if you remove PositionSegmentation"""
 
@@ -68,10 +67,7 @@ def update_camera_cfgs_from_dict(
         if k in camera_cfgs:
             continue
         for cfg in camera_cfgs.values():
-            if k == "add_segmentation":
-                # TODO (stao): doesn't work this way anymore
-                cfg.texture_names += ("Segmentation",)
-            elif not hasattr(cfg, k):
+            if not hasattr(cfg, k):
                 raise AttributeError(f"{k} is not a valid attribute of CameraConfig")
             else:
                 setattr(cfg, k, v)
@@ -163,14 +159,6 @@ class Camera(BaseSensor):
                 far=camera_cfg.far,
             )
 
-        if camera_cfg.hide_link:
-            # TODO (stao): re-implement this
-            from mani_skill import logger
-
-            logger.warn(
-                "camera hide_link option is not implemented yet so this won't be hidden"
-            )
-
         # Filter texture names according to renderer type if necessary (legacy for Kuafu)
         self.texture_names = camera_cfg.texture_names
 
@@ -186,6 +174,11 @@ class Camera(BaseSensor):
 
     def get_picture(self, name: str):
         return self.camera.get_picture(name)
+
+    def get_images(self) -> Tensor:
+        return visualization.tile_images(
+            visualization.observations_to_images(self.get_obs())
+        )
 
     # TODO (stao): Computing camera parameters on GPU sim is not that fast, especially with mounted cameras and for model_matrix computation.
     def get_params(self):

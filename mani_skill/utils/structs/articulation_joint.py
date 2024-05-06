@@ -69,7 +69,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
             active_index=active_joint_index,
             _objs=physx_joints,
             _physx_articulations=physx_articulations,
-            _scene=scene,
+            scene=scene,
             _scene_idxs=scene_idxs,
         )
 
@@ -92,28 +92,30 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
         """
         The qpos of this joint in the articulation
         """
+        assert (
+            self.active_index is not None
+        ), "Inactive joints do not have qpos/qvel values"
         if physx.is_gpu_enabled():
             return self.px.cuda_articulation_qpos.torch()[
                 self._data_index, self.active_index
             ]
         else:
-            return torch.tensor(
-                [[self._physx_articulations[0].qpos[self.active_index]]]
-            )
+            return torch.tensor([self._physx_articulations[0].qpos[self.active_index]])
 
     @property
     def qvel(self):
         """
         The qvel of this joint in the articulation
         """
+        assert (
+            self.active_index is not None
+        ), "Inactive joints do not have qpos/qvel values"
         if physx.is_gpu_enabled():
             return self.px.cuda_articulation_qvel.torch()[
                 self._data_index, self.active_index
             ]
         else:
-            return torch.tensor(
-                [[self._physx_articulations[0].qvel[self.active_index]]]
-            )
+            return torch.tensor([self._physx_articulations[0].qvel[self.active_index]])
 
     # -------------------------------------------------------------------------- #
     # Functions from physx.PhysxArticulationJoint
@@ -283,7 +285,7 @@ class ArticulationJoint(BaseStruct[physx.PhysxArticulationJoint]):
     @property
     def limits(self) -> torch.Tensor:
         # TODO (stao): create a decorator that caches results once gpu sim is initialized for performance
-        return common.to_tensor(np.array([obj.limits for obj in self._objs]))
+        return common.to_tensor(np.array([obj.limits[0] for obj in self._objs]))
 
     @limits.setter
     @before_gpu_init

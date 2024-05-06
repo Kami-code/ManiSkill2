@@ -7,7 +7,7 @@ from mani_skill.agents.base_agent import BaseAgent
 from mani_skill.envs.sapien_env import BaseEnv
 from mani_skill.envs.scene import ManiSkillScene
 from mani_skill.utils.structs.pose import to_sapien_pose
-
+import sapien.physx as physx
 OPEN = 1
 CLOSED = -1
 
@@ -43,7 +43,7 @@ class PandaArmMotionPlanningSolver:
         self.grasp_pose_visual = None
         if self.vis and self.visualize_target_grasp_pose:
             self.grasp_pose_visual = build_panda_gripper_grasp_pose_visual(
-                env.unwrapped._scene
+                env.unwrapped.scene
             )
             self.grasp_pose_visual.set_pose(env.unwrapped.agent.tcp.pose)
         self.elapsed_steps = 0

@@ -7,7 +7,7 @@ import sapien.physx as physx
 import torch
 
 from mani_skill import PACKAGE_ASSET_DIR
-from mani_skill.agents.base_agent import BaseAgent
+from mani_skill.agents.base_agent import BaseAgent, Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
 from mani_skill.sensors.camera import CameraConfig
@@ -17,7 +17,7 @@ from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 from mani_skill.utils.structs.types import Array
 
-FETCH_UNIQUE_COLLISION_BIT = 1 << 30
+FETCH_UNIQUE_COLLISION_BIT = 30
 """Collision bit of the fetch robot wheel links"""
 
 
@@ -30,13 +30,40 @@ class Fetch(BaseAgent):
             gripper=dict(static_friction=2.0, dynamic_friction=2.0, restitution=0.0)
         ),
         link=dict(
-            fetch_leftfinger=dict(
+            r_gripper_finger_link=dict(
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
-            fetch_rightfinger=dict(
+            l_gripper_finger_link=dict(
                 material="gripper", patch_radius=0.1, min_patch_radius=0.1
             ),
         ),
+    )
+
+    keyframes = dict(
+        rest=Keyframe(
+            pose=sapien.Pose(),
+            qpos=np.array(
+                np.array(
+                    [
+                        0,
+                        0,
+                        0,
+                        0.1,
+                        0,
+                        -0.370,
+                        0.562,
+                        -0.75,
+                        0.695,
+                        1.0,
+                        0.0,
+                        np.pi / 2,
+                        0,
+                        0.015,
+                        0.015,
+                    ]
+                )
+            ),
+        )
     )
 
     @property
@@ -339,18 +366,12 @@ class Fetch(BaseAgent):
         self.base_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "base_link"
         )
-        self.l_wheel_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "l_wheel_link"
-        )
-        self.r_wheel_link: Link = sapien_utils.get_obj_by_name(
-            self.robot.get_links(), "r_wheel_link"
-        )
+        self.l_wheel_link: Link = self.robot.links_map["l_wheel_link"]
+        self.r_wheel_link: Link = self.robot.links_map["r_wheel_link"]
         for link in [self.l_wheel_link, self.r_wheel_link]:
-            for body in link._bodies:
-                cs = body.get_collision_shapes()[0]
-                cg = cs.get_collision_groups()
-                cg[2] |= FETCH_UNIQUE_COLLISION_BIT
-                cs.set_collision_groups(cg)
+            link.set_collision_group_bit(
+                group=2, bit_idx=FETCH_UNIQUE_COLLISION_BIT, bit=1
+            )
 
         self.torso_lift_link: Link = sapien_utils.get_obj_by_name(
             self.robot.get_links(), "torso_lift_link"
